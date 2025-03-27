@@ -8,14 +8,16 @@ In order to assess if the recent years intensive large-scale fishery in coastal 
 File description:
 
 1) ```dataprocessing_from_ESP3output.R``` :  Processing ESP3 exported data after echo integration in ESP3
+  
+3) ``Processing hydroacoustic User manual.pdf`` : User manual for processing hydroacoustic data with ESP3 and ShinyAppR
    
-3) ```App_processESP3output.R``` :  R script to build Shiny APP to process data for online user (https://accessfjordproject.shinyapps.io/processESP3output/)
+4) ```App_processESP3output.R``` :  R script to build Shiny APP to process data for online user (https://accessfjordproject.shinyapps.io/processESP3output/)
 
-4) ```TStot_Echohist_Aug_09_2022.xlsx``` : example file of dbTS from ESP3: see User manual point 2: "Single Target and Echoes detection"
+5) ```TStot_Echohist_Aug_09_2022.xlsx``` : example file of dbTS from ESP3: see User manual point 2: "Single Target and Echoes detection"
 
-5) ```NASCtot_Aug_09_2022.xlsx``` : example file of dbNASC from ESP3: see User manual point 3: "Echo integration of the transect"
+6) ```NASCtot_Aug_09_2022.xlsx``` : example file of dbNASC from ESP3: see User manual point 3: "Echo integration of the transect"
 
-6) ``Processing hydroacoustic User manual.pdf`` : User manual for processing hydroacoustic data with ESP3 and ShinyAppR
+
 
 
    
