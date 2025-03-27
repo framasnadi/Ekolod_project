@@ -23,4 +23,4 @@ File description:
    
 * Project Leader: Agnes Karlson (Stockholm University - DEEP)
 
-* Authors: Francesco Masnadi (Stockholm University - DEEP)  
+* Author: Francesco Masnadi (Stockholm University - DEEP)  
