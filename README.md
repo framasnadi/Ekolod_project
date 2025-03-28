@@ -9,7 +9,7 @@ File description:
   
 3) ``Processing hydroacoustic User manual.pdf`` : User manual for processing hydroacoustic data with ESP3 and ShinyAppR
    
-4) ```App_processESP3output.R``` :  R script to build Shiny APP to process data for online user (https://accessfjordproject.shinyapps.io/processESP3output/)
+4) ```App_processESP3output.R``` :  R script to build Shiny APP to process data for online user (https://framasnadi.shinyapps.io/Ekolod_projectAPP/)
 
 5) ```TStot_Echohist_Aug_09_2022.xlsx``` : example file of dbTS from ESP3: see User manual point 2: "Single Target and Echoes detection"
 
