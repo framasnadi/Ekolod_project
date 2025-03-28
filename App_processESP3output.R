@@ -5,7 +5,7 @@ library(ggplot2)
 
 #############################################################
 #                                                           #
-#    Processing ESP3 exported data after echo integration   #
+#    Processing ESP3 exported data after Echo integration   #
 #                                                           #
 #   Author: Francesco Masnadi (DEEP, Stockholm University)  #
 #                                                           #
