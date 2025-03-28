@@ -94,7 +94,7 @@ ui <- fluidPage(
     tags$span("Need help? ",
               tags$a(
                 href = "https://www.su.se/english/profiles/frma6502-1.665005",
-                HTML("Francesco Masnadi (DEEP, Stockholm University)"), 
+                HTML("Francesco Masnadi (DEEP - Stockholm University)"), 
                 style = "color: #007BFF; text-decoration: none;"
               )
     )
