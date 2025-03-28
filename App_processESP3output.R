@@ -161,7 +161,7 @@ server <- function(input, output) {
       "Processing_hydroacoustic_User_manual.pdf"
     },
     content = function(file) {
-      file.copy("docs/Processing_hydroacoustic_User_manual.pdf", file)
+      file.copy("Processing_hydroacoustic_User_manual.pdf", file)
     }
   )
   
