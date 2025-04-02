@@ -24,8 +24,14 @@ process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max) {
       percentage = count / sum(count),
       sigma_bs = 10^(TSclas / 10)  # Convert echoes TS to backscattering cross-section
     ) %>%
-    # Join with total NASC from db_nasc
-    mutate(NASC = db_nasc$NASC) %>%
+    # Join with total NASC from db_nasc 
+    mutate(db_nasc %>% 
+                  group_by(Horz_Slice_Idx) %>% 
+                  summarise(sumproduct = sum(NASC*Nb_good_pings),# sumproduct by depth layer 
+                            goodpings = sum(Nb_good_pings),# good pings 
+                            sump_pings = sumproduct/goodpings,# sumproduct/good pings
+                            .groups = "drop") %>% 
+                  summarise(NASC= sum(sump_pings))) %>% # totNASc
     mutate(
       # here I mimic the procedure from the same function of StoX package: https://stoxproject.github.io/RstoxBase/reference/AcousticDensity.html
       NASCbyTS = (sigma_bs*count / sum(sigma_bs*count)) * NASC # NASC per bin
@@ -34,13 +40,13 @@ process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max) {
     mutate(
       # before starting, add Info from the transect
       Type = "Overall",
-      Info = as.POSIXct(unique(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),
+      Info = as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),
       Info = format(Info, "%b_%d_%Y"),
-      Year = format(as.POSIXct(unique(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%Y"),
-      Month = format(as.POSIXct(unique(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%m"),
-      Day =  format(as.POSIXct(unique(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%d"),
-      Time_Min =   abs(as.numeric(as.POSIXct(unique(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC")-as.POSIXct(unique(db_nasc$Time_E), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"))),
-      Distance = unique(db_nasc$Dist_E), # in meter
+      Year = format(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%Y"),
+      Month = format(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%m"),
+      Day =  format(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%d"),
+      Time_Min =   abs(as.numeric(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC")-as.POSIXct(max(db_nasc$Time_E), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"))),
+      Distance = max(db_nasc$Dist_E), # in meter
       SpeedVes =  (Distance/1852)/(Time_Min/60), # knots
       
       Len = 10^((TSclas - b20) / 20),  # Convert TS to fish length
@@ -95,6 +101,8 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 dbTS <- read_excel("TStot_Echohist_Aug_09_2022.xlsx", sheet = "Tracked Targets") 
 dbNASC <- read_excel("NASCtot_Aug_09_2022.xlsx") 
 
+#dbTS <- read_excel("C:/Users/frma6502/Desktop/SU/EKOLOD/esp3testH4/TShist.xlsx",sheet = "Tracked Targets")
+#dbNASC <- read_excel("C:/Users/frma6502/Desktop/SU/EKOLOD/esp3testH4/regionby10x10_badpings.xlsx")
 
 #######################################################################################
 # Calculate Total and "by TS" abundance/NASC/biomass for the specie/group of interest #
