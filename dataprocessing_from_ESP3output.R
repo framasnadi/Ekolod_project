@@ -11,7 +11,8 @@ library(readxl)
 library(dplyr)
 library(ggplot2)
 library(rstudioapi)
-# FUNCTION to produce metrics of interest starting from total NASC and TS-echoes histogram (similar to Stox)
+
+# Function to produce metrics of interest starting from total NASC and TS-echoes histogram (similar to Stox)
 process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max) {
   # Process TS data
   db_TS_hist <- db_hist %>% 
