@@ -144,7 +144,7 @@ ggplot(dbfin, aes(x = TSclas, y = abund_hectar_byTS, fill = Type, color =Type ))
 
  # plot Biom hist (considered only the masked part)
 ggplot(dbfin%>% dplyr::filter(Type=="Masked"), aes(x = TSclas, y = biomass_hectar_byTS, fill = Type, color =Type)) + geom_bar(stat = "identity", alpha =1  ,position= "identity") +
-  labs(title = paste0("Biomass Distribution: ", dbfin$Info), x = "mean TS (dB) of echoes", y = "kg/ha") +
+  labs(title = paste0("Biomass Distribution: ", dbfin$Info), x = "mean TS (dB) of echoes", y = "gr/ha") +
   theme_minimal(); unique(dbfin$tot_biomass_hectar)
 
 

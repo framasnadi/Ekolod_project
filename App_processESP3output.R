@@ -192,7 +192,7 @@ server <- function(input, output) {
         "<b>Total Masked Abundance (targets/ha): <b>", round(masked$tot_abund_hectar[1], 0)
       ))
     } else if (plot_type == "Biomass") {
-      paste0("Total Masked Biomass (kg/ha): ", round(masked$tot_biomass_hectar[1], 0))
+      paste0("Total Masked Biomass (gr/ha): ", round(masked$tot_biomass_hectar[1], 0))
     }
   })
   
@@ -254,7 +254,7 @@ server <- function(input, output) {
       mode_TS <- df %>% filter(Type == input$customLabel) %>% filter(biomass_hectar_byTS == max(biomass_hectar_byTS, na.rm = TRUE)) %>% pull(TSclas) %>% first()
       ggplot(df %>% filter(Type == input$customLabel), aes(x = TSclas, y = biomass_hectar_byTS, fill = Type,color =Type)) +
         geom_bar(stat = "identity", position = "identity") +
-        labs(title = paste0("Biomass Distribution: ", df$Info), x = "mean TS (dB) of echoes", y = "kg/ha")  + geom_vline(xintercept = mode_TS, linetype = "dashed", color = "black") + 
+        labs(title = paste0("Biomass Distribution: ", df$Info), x = "mean TS (dB) of echoes", y = "gr/ha")  + geom_vline(xintercept = mode_TS, linetype = "dashed", color = "black") + 
         annotate("text", x = mode_TS,y=(df %>% filter(Type == input$customLabel) %>% filter(biomass_hectar_byTS == max(biomass_hectar_byTS, na.rm = TRUE)) %>% pull(biomass_hectar_byTS))+10 , vjust = -0.5,
                  label = paste0("Mode: ", mode_TS, " dB"),
                  color = "black", fontface = "bold")+
