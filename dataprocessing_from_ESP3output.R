@@ -11,6 +11,7 @@ library(readxl)
 library(dplyr)
 library(ggplot2)
 library(rstudioapi)
+library(e1071)
 
 # Function to produce metrics of interest starting from total NASC and TS-echoes histogram (similar to Stox)
 process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max) {
@@ -49,6 +50,7 @@ process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max) {
       Time_Min =   abs(as.numeric(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC")-as.POSIXct(max(db_nasc$Time_E), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"))),
       Distance = max(db_nasc$Dist_E), # in meter
       SpeedVes =  (Distance/1852)/(Time_Min/60), # knots
+      Depth = max(db_nasc$Depth_max), # in meter
       
       Len = 10^((TSclas - b20) / 20),  # Convert TS to fish length
       W = a * Len^b,  # Compute fish weight
@@ -64,7 +66,12 @@ process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max) {
       mean_abund_hectar = mean(abund_hectar_byTS, na.rm = TRUE),
       tot_abund_hectar = sum(abund_hectar_byTS, na.rm = TRUE),
       mean_biomass_hectar = mean(biomass_hectar_byTS, na.rm = TRUE),
-      tot_biomass_hectar = sum(biomass_hectar_byTS, na.rm = TRUE)
+      tot_biomass_hectar = sum(biomass_hectar_byTS, na.rm = TRUE),
+      # proxies of community structure 
+      mean_TS = mean(rep(TSclas,count)),
+      median_TS = median(rep(TSclas,count)),
+      skewness_TS = skewness(rep(TSclas,count)), # <0 left skewed; >0 right skewed
+      IQR_TS = IQR(rep(TSclas,count)) #interquartile range
     )
   
   # Apply TS class filter while maintaining the same columns
@@ -76,19 +83,30 @@ process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max) {
       mean_abund_hectar = mean(abund_hectar_byTS, na.rm = TRUE),
       tot_abund_hectar = sum(abund_hectar_byTS, na.rm = TRUE),
       mean_biomass_hectar = mean(biomass_hectar_byTS, na.rm = TRUE),
-      tot_biomass_hectar = sum(biomass_hectar_byTS, na.rm = TRUE)
+      tot_biomass_hectar = sum(biomass_hectar_byTS, na.rm = TRUE),
+      # proxies of community structure 
+      mean_TS = mean(rep(TSclas,count)),
+      median_TS = median(rep(TSclas,count)),
+      skewness_TS = skewness(rep(TSclas,count)),
+      IQR_TS = IQR(rep(TSclas,count)) #interquartile range
     )
   
   # Combine total and masked datasets while ensuring same structure
-  dbfin <- bind_rows(db_TS_hist, db_TS_hist_mask) %>% select(Info,Year,Month,Day,Time_Min,Distance,SpeedVes,Type,NASC,tot_abund_hectar,tot_biomass_hectar,TSclas,Len,W,everything())
+  dbfin <- bind_rows(db_TS_hist, db_TS_hist_mask) %>% select(Info,Year,Month,Day,Time_Min,Depth,Distance,SpeedVes,Type,NASC,tot_abund_hectar,tot_biomass_hectar,mean_TS,median_TS,skewness_TS,IQR_TS,TSclas,Len,W,everything())
   
-  # Remove the biomass from the "Total" part of the db (since we don't have L-W rel)
+  # Remove variables from the "Total" part of the db (since we don't have L-W rel)
   dbfin <- dbfin %>%
     mutate(biomass_nm2_byTS = ifelse(Type == "Masked", biomass_nm2_byTS, NA),
            biomass_hectar_byTS = ifelse(Type == "Masked", biomass_hectar_byTS, NA),
            biomass_m2_byTS = ifelse(Type == "Masked", biomass_m2_byTS, NA),
            tot_biomass_hectar = ifelse(Type == "Masked", tot_biomass_hectar, NA),
-           mean_biomass_hectar = ifelse(Type == "Masked", mean_biomass_hectar, NA)
+           mean_biomass_hectar = ifelse(Type == "Masked", mean_biomass_hectar, NA),
+           Len = ifelse(Type == "Masked", Len, NA),
+           W = ifelse(Type == "Masked", W, NA),
+           mean_TS = ifelse(Type == "Masked", mean_TS, NA),
+           median_TS = ifelse(Type == "Masked", median_TS, NA),
+           skewness_TS = ifelse(Type == "Masked", skewness_TS, NA),
+           IQR_TS = ifelse(Type == "Masked", IQR_TS, NA)
            )
    
   return(dbfin)
@@ -113,10 +131,10 @@ dbNASC <- read_excel("NASCtot_Aug_09_2022.xlsx")
 a <- 0.0054 # a from L-W rel for clupeids (W=a*Len^b)      
 b <- 3.04 # b from L-W rel for clupeids (W=a*Len^b)          
 b20 <- -68.6 # b20 value in the Baltic from Didrikas & Hansson 2004
-TS_min <- -40   # assumed TS range for small pelagic fish/clupeids
-TS_max <- -60   # assumed TS range for small pelagic fish/clupeids
+TS_max <- -40   # assumed TS range for small pelagic fish/clupeids
+TS_min <- -60   # assumed TS range for small pelagic fish/clupeids
 # Call the function and View first rows of the final db
-dbfin <- process_ESP3_data(dbNASC, dbTS, a, b, b20, TS_min, TS_max);head(dbfin)
+dbfin <- process_ESP3_data(dbNASC, dbTS, a, b, b20, TS_max, TS_min);head(dbfin)
 
 
 ##################
@@ -128,7 +146,7 @@ dbfin <- process_ESP3_data(dbNASC, dbTS, a, b, b20, TS_min, TS_max);head(dbfin)
 ggplot(dbfin, aes(x = TSclas, y = percentage*100, fill = Type, color =Type )) +
   geom_bar(stat = "identity", alpha =1  ,position= "identity") +
   labs(title = paste0("Echos Target Strength Distribution: ", dbfin$Info), x = "mean TS (dB) of echoes", y = "Percentage (%)") + 
-  theme_minimal(); unique(dbfin$TSclas)
+  theme_minimal();unique(dbfin$mean_TS);unique(dbfin$median_TS);unique(dbfin$skewness_TS);unique(dbfin$IQR_TS)
 
 # plot NASC hist
 ggplot(dbfin, aes(x = TSclas, y = NASCbyTS, fill = Type, color =Type )) +
