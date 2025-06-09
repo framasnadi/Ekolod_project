@@ -46,7 +46,7 @@ process_ESP3_data <- function(db_nasc, db_hist, a, b, b20, TS_min, TS_max,masked
       Month = format(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%m"),
       Day =  format(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"),format = "%d"),
       Time_Min =   abs(as.numeric(as.POSIXct(min(db_nasc$Time_S), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC")-as.POSIXct(max(db_nasc$Time_E), format = "%d/%m/%Y %H:%M:%OS", tz = "UTC"))),
-      Distance = max(db_nasc$Dist_E), # in meter
+      Distance = max(db_nasc$Dist_E)-min(db_nasc$Dist_S) , # in meter
       SpeedVes =  (Distance/1852)/(Time_Min/60), # knots
       Depth = max(db_nasc$Depth_max), # in meter
       
@@ -168,6 +168,8 @@ ui <- fluidPage(
 )
 
 # SERVER ########################################################################
+# Set max upload size to 50 MB
+options(shiny.maxRequestSize = 50 * 1024^2)
 server <- function(input, output) {
   dataset <- reactive({
     req(input$ts_file, input$nasc_file)
