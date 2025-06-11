@@ -15,7 +15,8 @@ File description :
 
 6) ```NASCtot_Aug_09_2022.xlsx``` : example file of dbNASC from ESP3: see User manual point 3: "Echo integration of the transect"
 
-
+7) ```Timeseries_building_OLDplusNEW.R``` : script to merge new and historical data in a single timeseries
+   
 * Author: Francesco Masnadi (Stockholm University - DEEP)  
 
 **Project Summary**
