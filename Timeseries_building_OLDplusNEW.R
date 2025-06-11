@@ -7,6 +7,7 @@ library(readxl)
 library(e1071)
 library(ggplot2)
 library(stringr)
+library(readr)
 setwd("C:/Users/frma6502/Desktop/SU/EKOLOD")
 
 ##########
@@ -31,8 +32,8 @@ process_file <- function(csv_file) {
                           stringsAsFactors = FALSE)
   
   # TS classes & counts (rows 80:95 → TSclas[1:16])
-  TSclas      <- seq(-32, -62, by = -2)
-  fish_counts <- round(as.numeric(raw_data[80:95, 3]))
+  TSclas      <- seq(-41, -55, by = -2)
+  fish_counts <- round(as.numeric(raw_data[85:92, 3]))  # to match the TSclas selected
   
   # expand for summary stats
   expanded <- rep(TSclas, times = fish_counts)
@@ -109,7 +110,23 @@ db_final_new <- map_dfr(
     file    = basename(new_files[as.integer(file)]),
     Station = str_sub(tools::file_path_sans_ext(file), 1, 2)
   ) %>%
-  select(-file)
+  select(-file) 
+# Filter dbnew to match the same TS class of the old data (-41;-56)
+db_final_new <- db_final_new %>% dplyr:: filter(TSclas <= -41 & TSclas >= -55 )  %>% 
+  group_by(Station, Time_Min) %>% 
+  mutate(
+  NASC = sum(NASCbyTS, na.rm = TRUE),
+  mean_abund_hectar = mean(abund_hectar_byTS, na.rm = TRUE),
+  tot_abund_hectar = sum(abund_hectar_byTS, na.rm = TRUE),
+  mean_biomass_hectar = mean(biomass_hectar_byTS, na.rm = TRUE),
+  tot_biomass_hectar = sum(biomass_hectar_byTS, na.rm = TRUE),
+  # proxies of community structure 
+  mean_TS = mean(rep(TSclas,count)),
+  median_TS = median(rep(TSclas,count)),
+  skewness_TS = skewness(rep(TSclas,count)), # <0 left skewed; >0 right skewed
+  IQR_TS = IQR(rep(TSclas,count)) #interquartile range
+)
+
 # db version for plotting - New
 summary_plot_new <- db_final_new %>%
   mutate(
@@ -141,6 +158,10 @@ summary_plot_new <- db_final_new %>%
 ####################
 # Merge new and old
 summary_plot <- rbind(summary_plot_old, summary_plot_new)%>% dplyr::filter(Season != "Spring")
+
+
+
+
 
 
 ################################
