@@ -111,7 +111,7 @@ db_final_new <- map_dfr(
     Station = str_sub(tools::file_path_sans_ext(file), 1, 2)
   ) %>%
   select(-file) 
-# Filter dbnew to match the same TS class of the old data (-41;-56)
+# Filter db_new to match the same TS class of the old data (-41;-56)
 db_final_new <- db_final_new %>% dplyr:: filter(TSclas <= -41 & TSclas >= -55 )  %>% 
   group_by(Station, Time_Min) %>% 
   mutate(
