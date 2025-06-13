@@ -8,6 +8,7 @@ library(e1071)
 library(ggplot2)
 library(stringr)
 library(readr)
+library(ggpubr)
 setwd("C:/Users/frma6502/Desktop/SU/EKOLOD")
 
 ##########
@@ -30,10 +31,17 @@ process_file <- function(csv_file) {
                           header = FALSE,
                           fill = TRUE,
                           stringsAsFactors = FALSE)
-  
-  # TS classes & counts (rows 80:95 → TSclas[1:16])
-  TSclas      <- seq(-41, -55, by = -2)
+  # TS classes & counts
+  TSclas      <- seq(-41, -55, by = -2)   # ALL community
   fish_counts <- round(as.numeric(raw_data[85:92, 3]))  # to match the TSclas selected
+  #TSclas      <- seq(-41, -49, by = -2)  # adults clupeid
+  #fish_counts <- round(as.numeric(raw_data[85:89, 3]))  # to match juveniles TSclas 
+  #TSclas      <- seq(-51, -55, by = -2)  # juveniles
+  #fish_counts <- round(as.numeric(raw_data[90:92, 3]))  # to match juveniles TSclas 
+  
+  fish_nasc <- (as.numeric(raw_data[85:92, 6]))  # to match the TSclas selected
+  fish_abun <- (as.numeric(raw_data[85:92, 3]))  # to match the TSclas selected
+  fish_biom <- (as.numeric(raw_data[85:92, 10]))  # to match the TSclas selected
   
   # expand for summary stats
   expanded <- rep(TSclas, times = fish_counts)
@@ -54,18 +62,20 @@ process_file <- function(csv_file) {
     Distance            = NA_real_,
     SpeedVes            = NA_real_,
     Type                = "SmallPel",
-    NASC                = md$NASCsmallpel,
-    tot_abund_hectar    = md$Abundancesmallpel,
-    tot_biomass_hectar  = md$Biomasssmallpel,
+    NASC                 = sum(fish_nasc, na.rm = TRUE),
+    tot_abund_hectar     = sum(fish_abun, na.rm = TRUE),
+    tot_biomass_hectar   = sum(fish_biom, na.rm = TRUE),
     mean_TS             = mean(expanded, na.rm = TRUE),
     median_TS           = median(expanded, na.rm = TRUE),
     skewness_TS         = e1071::skewness(expanded, na.rm = TRUE), # <0 left skewed; >0 right skewed
     IQR_TS              = IQR(expanded, na.rm = TRUE)
   )
 }
+
 # Get all .CSV files and process them
 csv_files <- list.files(data_path, pattern = "\\.CSV$", full.names = TRUE,ignore.case=TRUE)
 db_final_historic <- map_dfr(csv_files, process_file)
+
 # db version for plotting - Historical
 summary_plot_old <- db_final_historic %>%
   mutate(
@@ -90,6 +100,9 @@ summary_plot_old <- db_final_historic %>%
     mean_abun = mean(log10(tot_abund_hectar), na.rm = TRUE),
     sd_abun   = sd(log10(tot_abund_hectar),   na.rm = TRUE),
     cv_abun   = sd_abun / mean_abun,
+    mean_biom = mean(log10(tot_biomass_hectar), na.rm = TRUE),
+    sd_biom   = sd(log10(tot_biomass_hectar),   na.rm = TRUE),
+    cv_biom   = sd_biom / mean_biom,
     mean_median_TS = mean(median_TS, na.rm = TRUE),
     sd_median_TS   = sd(median_TS,   na.rm = TRUE),
     cv_median_TS   = sd_median_TS / mean_median_TS,
@@ -98,12 +111,12 @@ summary_plot_old <- db_final_historic %>%
   )
 
 ##########
-# New data 2023 August
-data_path_new    <- "C:/Users/frma6502/Desktop/SU/EKOLOD/ESP3output/output2023"
+# New data 2023 August, 2024 September
+data_path_new    <- "C:/Users/frma6502/Desktop/SU/EKOLOD/ESP3output/outputNEW"
 new_files <- list.files(data_path_new, pattern = "\\.CSV$", full.names = TRUE,ignore.case=TRUE)
 db_final_new <- map_dfr(
   new_files,
-  ~ read_csv(.x) %>% filter(Type == "SmallPel"),
+  ~ read_csv(.x) %>% filter(Type == "SmallPel") %>% mutate(Day = as.character(Day),Month = as.character(Month)),
   .id = "file"        
 ) %>%
   mutate(
@@ -111,15 +124,15 @@ db_final_new <- map_dfr(
     Station = str_sub(tools::file_path_sans_ext(file), 1, 2)
   ) %>%
   select(-file) 
-# Filter db_new to match the same TS class of the old data (-41;-56)
+# Filter db_new to match the same TS class of the old data (-41;-55)
 db_final_new <- db_final_new %>% dplyr:: filter(TSclas <= -41 & TSclas >= -55 )  %>% 
-  group_by(Station, Time_Min) %>% 
+  group_by(Year,Station, Time_Min) %>% 
   mutate(
   NASC = sum(NASCbyTS, na.rm = TRUE),
   mean_abund_hectar = mean(abund_hectar_byTS, na.rm = TRUE),
-  tot_abund_hectar = sum(abund_hectar_byTS, na.rm = TRUE),
-  mean_biomass_hectar = mean(biomass_hectar_byTS, na.rm = TRUE),
-  tot_biomass_hectar = sum(biomass_hectar_byTS, na.rm = TRUE),
+  tot_abund_hectar = sum(abund_hectar_byTS, na.rm = TRUE), 
+  mean_biomass_hectar = mean(biomass_hectar_byTS/1000, na.rm = TRUE), # gr to kg
+  tot_biomass_hectar = sum(biomass_hectar_byTS/1000, na.rm = TRUE), # gr to kg
   # proxies of community structure 
   mean_TS = mean(rep(TSclas,count)),
   median_TS = median(rep(TSclas,count)),
@@ -148,6 +161,9 @@ summary_plot_new <- db_final_new %>%
     mean_abun = mean(log10(tot_abund_hectar), na.rm = TRUE),
     sd_abun   = sd(log10(tot_abund_hectar),   na.rm = TRUE),
     cv_abun   = sd_abun / mean_abun,
+    mean_biom = mean(log10(tot_biomass_hectar), na.rm = TRUE),
+    sd_biom   = sd(log10(tot_biomass_hectar),   na.rm = TRUE),
+    cv_biom   = sd_biom / mean_biom,
     mean_median_TS = mean(median_TS, na.rm = TRUE),
     sd_median_TS   = sd(median_TS,   na.rm = TRUE),
     cv_median_TS   = sd_median_TS / mean_median_TS,
@@ -158,17 +174,20 @@ summary_plot_new <- db_final_new %>%
 ####################
 # Merge new and old
 summary_plot <- rbind(summary_plot_old, summary_plot_new)%>% dplyr::filter(Season != "Spring")
-
-
-
-
-
+# Add values form Svedäng 2021 in H4 summer
+summary_plot[nrow(summary_plot) + 1, ] <- NA
+summary_plot[34, ]$Station <- "H4"
+summary_plot[34, ]$Season <- "Summer"
+summary_plot[34, ]$Year <- 2021
+summary_plot[34, ]$mean_NASC <- log10(343*3.43)
+summary_plot[34, ]$mean_abun <- log10(1.688*10000)
+summary_plot[34, ]$mean_median_TS <- -51 # estimated visually from the Figure S6 of the supl mat
 
 ################################
 # PLOT metric TIME SERIES
 ################################
 # NASC
-ggplot(summary_plot,
+ggnasc <- ggplot(summary_plot,
        aes(x = Year, y = mean_NASC, color = Season, group = Season)) +
   #geom_line() +
   geom_point(size=1.5) +
@@ -177,17 +196,17 @@ ggplot(summary_plot,
     ymax = mean_NASC + (cv_NASC * mean_NASC)
   ),
   width = 0.2
-  ) + geom_smooth(method="lm", se=F, linetype= "dashed", size=0.7 )+
+  ) + geom_smooth(method="gam",formula = y ~ s(x,bs="cs", k = 4), se=F, linetype= "dashed", size=0.7 )+
   facet_wrap(~ Station, scales = "free_y", ncol=1) +
   labs(
     title = "NASC",
-    x     = "Year",
+    x     = "",
     y     = "log10(NASC)"
   ) +
-  theme_minimal()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(angle=90))
+  theme_pubr()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(vjust = 0.5, angle=90))
 
 # Abundance
-ggplot(summary_plot,
+ggabb <- ggplot(summary_plot,
        aes(x = Year, y = mean_abun, color = Season, group = Season)) +
  # geom_line() +
   geom_point(size=1.5) +
@@ -196,17 +215,36 @@ ggplot(summary_plot,
     ymax = mean_abun + (cv_abun * mean_abun)
   ),
   width = 0.2
-  ) + geom_smooth(method="lm", se=F, linetype= "dashed", size=0.7 )+
+  ) + geom_smooth(method="gam",formula = y ~ s(x,bs="cs", k = 4), se=F, linetype= "dashed", size=0.7 )+
   facet_wrap(~ Station, scales = "free_y", ncol=1) +
   labs(
     title = "Abundance",
-    x     = "Year",
-    y     = "log10(Abundance)"
+    x     = "",
+    y     = "log10(fish/ha)"
   ) +
-  theme_minimal()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(angle=90))
+  theme_pubr()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(vjust = 0.5, angle=90))
+
+# Biomass
+ggbiom <- ggplot(summary_plot,
+       aes(x = Year, y = mean_biom, color = Season, group = Season)) +
+  # geom_line() +
+  geom_point(size=1.5) +
+  geom_errorbar(aes(
+    ymin = mean_biom - (cv_biom * mean_biom),
+    ymax = mean_biom + (cv_biom * mean_biom)
+  ),
+  width = 0.2
+  ) + geom_smooth(method="gam",formula = y ~ s(x,bs="cs", k = 4), se=F, linetype= "dashed", size=0.7 )+
+  facet_wrap(~ Station, scales = "free_y", ncol=1) +
+  labs(
+    title = "Biomass",
+    x     = "",
+    y     = "log10(gr/ha)"
+  ) +
+  theme_pubr()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(vjust = 0.5, angle=90))
 
 # Skewness
-ggplot(summary_plot,
+ggskew <-ggplot(summary_plot,
        aes(x = Year, y = mean_skew, color = Season, group = Season)) +
  # geom_line() +
   geom_point(size=1.5) +
@@ -215,17 +253,17 @@ ggplot(summary_plot,
     ymax = mean_skew + (cv_skew * mean_skew)
   ),
   width = 0.2
-  ) + geom_smooth(method="lm", se=F, linetype= "dashed", size=0.7 )+
+  ) + geom_smooth(method="gam",formula = y ~ s(x,bs="cs", k = 4), se=F, linetype= "dashed", size=0.7 )+
   facet_wrap(~ Station, scales = "free_y", ncol=1) +
   labs(
-    title = "TS Skewness",
-    x     = "Year",
+    title = "Skewness (high skewness = smaller individuals)",
+    x     = "",
     y     = "Skewness"
   ) +
-  theme_minimal()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(angle=90))
+  theme_pubr()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(vjust = 0.5, angle=90))
 
 # median TS
-ggplot(summary_plot,
+ggmedian <- ggplot(summary_plot,
        aes(x = Year, y = mean_median_TS, color = Season, group = Season)) +
   # geom_line() +
   geom_point(size=1.5) +
@@ -234,14 +272,28 @@ ggplot(summary_plot,
     ymax = mean_median_TS + (cv_median_TS * mean_median_TS)
   ),
   width = 0.2
-  ) + geom_smooth(method="lm", se=F, linetype= "dashed", size=0.7 )+
+  ) + geom_smooth(method="gam",formula = y ~ s(x,bs="cs", k = 4), se=F, linetype= "dashed", size=0.7 )+
   facet_wrap(~ Station, scales = "free_y", ncol=1) +
   labs(
-    title = "Median TS",
-    x     = "Year",
+    title = "Median TS (Adult clupeids > -50 dB < juveniles/sticklebacks)",
+    x     = "",
     y     = "Median TS (dB)"
-  ) +
-  theme_minimal()+ scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text(angle=90))
+  ) + geom_hline(yintercept = -50, linetype= "dotted") +
+  theme_pubr()+scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text( vjust = 0.5, angle=90))
 
 
+######################
+# All plot together
+jpeg("Ekolodtimeseries_metrics.jpeg",width = 360, height = 230, units = "mm", res = 600)
+ggarrange(ggnasc, ggabb, ggskew, ggmedian  , 
+          common.legend = TRUE,
+          legend       = "bottom",
+          ncol = 2, nrow = 2)
+dev.off()
+
+# for different species/life stages
+ggarrange(ggnasc, ggabb , 
+          common.legend = TRUE,
+          legend       = "bottom",
+          ncol = 2, nrow = 1)
 
