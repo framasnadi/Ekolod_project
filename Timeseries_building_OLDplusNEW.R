@@ -17,7 +17,7 @@ setwd("C:/Users/frma6502/Desktop/SU/EKOLOD")
 data_path    <- "C:/Users/frma6502/Desktop/SU/EKOLOD/OLDfiles_Sture/Historical_Data"
 meta_path    <- "C:/Users/frma6502/Desktop/SU/EKOLOD/OLDfiles_Sture/Summary_stations.xlsx"
 # Read station metadata once
-summary_meta <- read_excel(meta_path, sheet = "Subset")
+summary_meta <- read_excel(meta_path, sheet = "Subset") %>% dplyr::filter(!(Time %in% c("Daytime", "Daylight", NA)))
 
 # Function to process one CSV
 process_file <- function(csv_file) {
@@ -75,6 +75,39 @@ process_file <- function(csv_file) {
 # Get all .CSV files and process them
 csv_files <- list.files(data_path, pattern = "\\.CSV$", full.names = TRUE,ignore.case=TRUE)
 db_final_historic <- map_dfr(csv_files, process_file)
+
+# 1. Count samples per Station × Year
+availability_counts <- db_final_historic %>%
+  group_by(Station, Year) %>%
+  summarise(n_samples = n(), .groups = "drop") %>%
+  mutate(
+    Year = as.integer(as.character(Year))
+  )
+# 2. Plot: tile fill mapped to sample count
+jpeg("Ekolodtimeseries_availability.jpeg",width = 300, height = 430, units = "mm", res = 600)
+ggplot(availability_counts, aes(x = Year, y = Station, fill = n_samples)) +
+  geom_tile(colour = "black") +                    # white borders to separate tiles
+  scale_fill_gradient(
+    low  = "lightblue",    # few samples → blue
+    high = "red",     # many samples → red
+    name = "Samples\nper Year"
+  ) +
+  scale_x_continuous(breaks = seq(
+    min(availability_counts$Year),
+    max(availability_counts$Year), by = 1
+  )) +
+  theme_pubr() +
+  theme(
+    axis.text.x    = element_text(angle = 45, hjust = 1),
+    panel.grid     = element_blank(),
+    legend.position = "right"
+  ) +
+  labs(
+    title = "Yearly Sampling Effort by Station",
+    x     = "",
+    y     = ""
+  )
+dev.off()
 
 # db version for plotting - Historical
 summary_plot_old <- db_final_historic %>%
