@@ -77,15 +77,20 @@ csv_files <- list.files(data_path, pattern = "\\.CSV$", full.names = TRUE,ignore
 db_final_historic <- map_dfr(csv_files, process_file)
 
 # 1. Count samples per Station × Year
-availability_counts <- db_final_historic %>%
-  group_by(Station, Year) %>%
+availability_counts <- db_final_historic %>%  mutate(
+  Season = case_when(
+    Month %in% c("12","01","02") ~ "Winter",
+    Month %in% c("03","04","05") ~ "Spring",
+    Month %in% c("06","07","08") ~ "Summer",
+    Month %in% c("09","10","11") ~ "Autumn") ) %>%
+  group_by(Station, Year,Season) %>%
   summarise(n_samples = n(), .groups = "drop") %>%
   mutate(
     Year = as.integer(as.character(Year))
   )
 # 2. Plot: tile fill mapped to sample count
-jpeg("Ekolodtimeseries_availability.jpeg",width = 300, height = 430, units = "mm", res = 600)
-ggplot(availability_counts, aes(x = Year, y = Station, fill = n_samples)) +
+jpeg("Ekolodtimeseries_availability.jpeg",width = 400, height = 430, units = "mm", res = 600)
+ggplot(availability_counts%>% dplyr::filter(Season != "Spring"), aes(x = Year, y = Station, fill = n_samples)) +
   geom_tile(colour = "black") +                    # white borders to separate tiles
   scale_fill_gradient(
     low  = "lightblue",    # few samples → blue
@@ -96,7 +101,7 @@ ggplot(availability_counts, aes(x = Year, y = Station, fill = n_samples)) +
     min(availability_counts$Year),
     max(availability_counts$Year), by = 1
   )) +
-  theme_pubr() +
+  theme_bw() +
   theme(
     axis.text.x    = element_text(angle = 45, hjust = 1),
     panel.grid     = element_blank(),
@@ -106,7 +111,7 @@ ggplot(availability_counts, aes(x = Year, y = Station, fill = n_samples)) +
     title = "Yearly Sampling Effort by Station",
     x     = "",
     y     = ""
-  )
+  ) +  facet_wrap(~ Season, ncol=2)
 dev.off()
 
 # db version for plotting - Historical
