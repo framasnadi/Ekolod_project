@@ -144,6 +144,9 @@ summary_plot_old <- db_final_historic %>%
     mean_median_TS = mean(median_TS, na.rm = TRUE),
     sd_median_TS   = sd(median_TS,   na.rm = TRUE),
     cv_median_TS   = sd_median_TS / mean_median_TS,
+    mean_IQR_TS = mean(IQR_TS, na.rm = TRUE),
+    sd_IQR_TS   = sd(IQR_TS,   na.rm = TRUE),
+    cv_IQR_TS   = sd_IQR_TS / mean_IQR_TS,
     # ADD OTHER METRICS!!!
     .groups   = "drop"
   )
@@ -177,9 +180,26 @@ db_final_new <- db_final_new %>% dplyr:: filter(TSclas <= -41 & TSclas >= -55 ) 
   skewness_TS = skewness(rep(TSclas,count)), # <0 left skewed; >0 right skewed
   IQR_TS = IQR(rep(TSclas,count)) #interquartile range
 )
+# ONLY NEW DATA: Weighted mean to merge the different trawls of 1 day of sampling into 1 sampling unit
+weigthed_day_result <- db_final_new %>%
+  mutate(
+    Year   = as.integer(Year)
+  ) %>%
+  group_by(Info, Station,Year, Month) %>%
+  summarise(
+    skewness_TS = (weighted.mean(skewness_TS, Distance, na.rm = FALSE)),
+    NASC = (weighted.mean(NASC, Distance, na.rm = FALSE)),
+    tot_abund_hectar = (weighted.mean(tot_abund_hectar, Distance, na.rm = FALSE)),
+    tot_biomass_hectar = (weighted.mean(tot_biomass_hectar, Distance, na.rm = FALSE)),
+    median_TS = (weighted.mean(median_TS, Distance, na.rm = FALSE)),
+    IQR_TS = (weighted.mean(IQR_TS, Distance, na.rm = FALSE)),
+    # ADD OTHER METRICS!!!
+    .groups   = "drop"
+  )
+
 
 # db version for plotting - New
-summary_plot_new <- db_final_new %>%
+summary_plot_new <- weigthed_day_result %>%
   mutate(
     Year   = as.integer(Year),
     Season = case_when(
@@ -205,6 +225,9 @@ summary_plot_new <- db_final_new %>%
     mean_median_TS = mean(median_TS, na.rm = TRUE),
     sd_median_TS   = sd(median_TS,   na.rm = TRUE),
     cv_median_TS   = sd_median_TS / mean_median_TS,
+    mean_IQR_TS = mean(IQR_TS, na.rm = TRUE),
+    sd_IQR_TS   = sd(IQR_TS,   na.rm = TRUE),
+    cv_IQR_TS   = sd_IQR_TS / mean_IQR_TS,
     # ADD OTHER METRICS!!!
     .groups   = "drop"
   )
@@ -214,12 +237,12 @@ summary_plot_new <- db_final_new %>%
 summary_plot <- rbind(summary_plot_old, summary_plot_new)%>% dplyr::filter(Season != "Spring")
 # Add values form Svedäng 2021 in H4 summer
 summary_plot[nrow(summary_plot) + 1, ] <- NA
-summary_plot[34, ]$Station <- "H4"
-summary_plot[34, ]$Season <- "Summer"
-summary_plot[34, ]$Year <- 2021
-summary_plot[34, ]$mean_NASC <- log10(343*3.43)
-summary_plot[34, ]$mean_abun <- log10(1.688*10000)
-summary_plot[34, ]$mean_median_TS <- -51 # estimated visually from the Figure S6 of the supl mat
+summary_plot[36, ]$Station <- "H4"
+summary_plot[36, ]$Season <- "Summer"
+summary_plot[36, ]$Year <- 2021
+summary_plot[36, ]$mean_NASC <- log10(343*3.43)
+summary_plot[36, ]$mean_abun <- log10(1.688*10000)
+summary_plot[36, ]$mean_median_TS <- -51 # estimated visually from the Figure S6 of the supl mat
 
 ################################
 # PLOT metric TIME SERIES
@@ -317,6 +340,25 @@ ggmedian <- ggplot(summary_plot,
     x     = "",
     y     = "Median TS (dB)"
   ) + geom_hline(yintercept = -50, linetype= "dotted") +
+  theme_pubr()+scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text( vjust = 0.5, angle=90))
+
+# IQR TS
+ggiqr <- ggplot(summary_plot,
+                   aes(x = Year, y = mean_IQR_TS, color = Season, group = Season)) +
+  # geom_line() +
+  geom_point(size=1.5) +
+  geom_errorbar(aes(
+    ymin = mean_IQR_TS - (cv_IQR_TS * mean_IQR_TS),
+    ymax = mean_IQR_TS + (cv_IQR_TS * mean_IQR_TS)
+  ),
+  width = 0.2
+  ) + geom_smooth(method="gam",formula = y ~ s(x,bs="cs", k = 4), se=F, linetype= "dashed", size=0.7 )+
+  facet_wrap(~ Station, scales = "free_y", ncol=1) +
+  labs(
+    title = "IQR TS (high IQR = high heterogeneity in community)",
+    x     = "",
+    y     = "IQR TS"
+  )  +
   theme_pubr()+scale_x_continuous(breaks = seq(1985, 2024,  by = 1)) + theme( axis.text.x = element_text( vjust = 0.5, angle=90))
 
 
