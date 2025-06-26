@@ -140,7 +140,7 @@ ui <- fluidPage(
      #helpText("Rename the filter as:"),
       textInput("customLabel", "Rename the TS mask as:", value = "SmallPel"),
       helpText("Species-specific empirical relationship between TS and length (Length = 10^((TS - b20)/20) e.g.; from Didrikas & Hansson 2004 for clupeids in the Baltic)"),
-      numericInput("b20", "b20 (e.g., -67.8 for clupeids)", value = -68.6),
+      numericInput("b20", "b20 (e.g., -67.8 for clupeids)", value = -67.8),
       helpText("Length-Weight relationship (W=a*Len^b)"),
       numericInput("a", "Parameter a (e.g.; 0.0054 for clupeids)", value = 0.0054),
       #helpText("Length-Weight relationship (W=a*Len^b)"),
